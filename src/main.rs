@@ -1,9 +1,8 @@
 use color_eyre::Result;
 use crossterm::event::EventStream;
 use ratatui::DefaultTerminal;
-use ui::page::Page;
+use ui::Page;
 
-mod router;
 mod ui;
 
 #[tokio::main]
@@ -16,31 +15,29 @@ async fn main() -> color_eyre::Result<()> {
     result
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct App {
     /// Is the application running?
     running: bool,
     // Event stream.
     event_stream: EventStream,
+    page: Option<Page>, //this has to be Option to allow me to 'move' value outside of App
 }
 
 impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        Self::default()
+        App {
+            running: true,
+            event_stream: EventStream::default(),
+            page: Some(Page::LandingPage(ui::landing::LandingPage {})),
+        }
     }
 
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
-        self.running = true;
-
         while self.running {
-            let current_route = router::routes::Routes::LandingPage;
-
-            let page = router::route(current_route);
-
-            terminal.draw(|frame| page.draw(&mut self, frame))?;
-            page.handle_crossterm_events(&mut self).await?;
+            ui::handle_page(&mut self, &mut terminal).await?;
         }
         Ok(())
     }
